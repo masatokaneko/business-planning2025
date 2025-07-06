@@ -31,8 +31,8 @@ target_companies = df[
     (df['IT投資Tier'].isin(['Tier1', 'Tier2']))
 ]
 
-# Create segment labels
-target_companies['セグメント'] = target_companies['売上高Tier'] + ' × ' + target_companies['IT投資Tier']
+# Create segment labels with clear prefixes
+target_companies['セグメント'] = '売上' + target_companies['売上高Tier'] + ' × IT投資' + target_companies['IT投資Tier']
 
 # Analyze by industry and segment
 industry_segment_pivot = pd.crosstab(
@@ -50,10 +50,10 @@ industry_summary_list = []
 for industry in industries:
     row_data = {
         '業種': industry,
-        'Tier1×Tier1': industry_segment_pivot.loc[industry, 'Tier1 × Tier1'] if 'Tier1 × Tier1' in industry_segment_pivot.columns else 0,
-        'Tier1×Tier2': industry_segment_pivot.loc[industry, 'Tier1 × Tier2'] if 'Tier1 × Tier2' in industry_segment_pivot.columns else 0,
-        'Tier2×Tier1': industry_segment_pivot.loc[industry, 'Tier2 × Tier1'] if 'Tier2 × Tier1' in industry_segment_pivot.columns else 0,
-        'Tier2×Tier2': industry_segment_pivot.loc[industry, 'Tier2 × Tier2'] if 'Tier2 × Tier2' in industry_segment_pivot.columns else 0,
+        '売上Tier1×IT投資Tier1': industry_segment_pivot.loc[industry, '売上Tier1 × IT投資Tier1'] if '売上Tier1 × IT投資Tier1' in industry_segment_pivot.columns else 0,
+        '売上Tier1×IT投資Tier2': industry_segment_pivot.loc[industry, '売上Tier1 × IT投資Tier2'] if '売上Tier1 × IT投資Tier2' in industry_segment_pivot.columns else 0,
+        '売上Tier2×IT投資Tier1': industry_segment_pivot.loc[industry, '売上Tier2 × IT投資Tier1'] if '売上Tier2 × IT投資Tier1' in industry_segment_pivot.columns else 0,
+        '売上Tier2×IT投資Tier2': industry_segment_pivot.loc[industry, '売上Tier2 × IT投資Tier2'] if '売上Tier2 × IT投資Tier2' in industry_segment_pivot.columns else 0,
         '合計': industry_segment_pivot.loc[industry, '合計']
     }
     industry_summary_list.append(row_data)
@@ -64,19 +64,21 @@ industry_summary = industry_summary.sort_values('合計', ascending=False)
 # Add total row
 total_row = {
     '業種': '合計',
-    'Tier1×Tier1': industry_summary['Tier1×Tier1'].sum(),
-    'Tier1×Tier2': industry_summary['Tier1×Tier2'].sum(),
-    'Tier2×Tier1': industry_summary['Tier2×Tier1'].sum(),
-    'Tier2×Tier2': industry_summary['Tier2×Tier2'].sum(),
+    '売上Tier1×IT投資Tier1': industry_summary['売上Tier1×IT投資Tier1'].sum(),
+    '売上Tier1×IT投資Tier2': industry_summary['売上Tier1×IT投資Tier2'].sum(),
+    '売上Tier2×IT投資Tier1': industry_summary['売上Tier2×IT投資Tier1'].sum(),
+    '売上Tier2×IT投資Tier2': industry_summary['売上Tier2×IT投資Tier2'].sum(),
     '合計': industry_summary['合計'].sum()
 }
 industry_summary = pd.concat([industry_summary, pd.DataFrame([total_row])], ignore_index=True)
 
 # Save industry summary with segments
-industry_summary.to_csv('業種別_Tier1-2企業数_セグメント別.csv', index=False, encoding='utf-8-sig')
+industry_summary.to_csv('業種別_売上Tier1-2×IT投資Tier1-2企業数.csv', index=False, encoding='utf-8-sig')
 
-print("=== 業種別 Tier1-2 x Tier1-2 企業数（セグメント別） ===")
+print("=== 業種別 売上Tier1-2 × IT投資Tier1-2 企業数分析 ===")
 print(f"総企業数: {len(target_companies)}社")
+print("\n売上高Tier定義: Tier1(1兆円以上), Tier2(3千億円以上)")
+print("IT投資Tier定義: Tier1(300億円以上), Tier2(100億円以上)")
 print("\n業種別・セグメント別内訳:")
 print(industry_summary.to_string(index=False))
 
@@ -100,14 +102,14 @@ for industry in target_companies['業種'].unique():
 # Create DataFrame and save
 detailed_df = pd.DataFrame(detailed_list)
 detailed_df = detailed_df.sort_values(['業種', '売上高（億円）'], ascending=[True, False])
-detailed_df.to_csv('Tier1-2企業詳細リスト.csv', index=False, encoding='utf-8-sig')
+detailed_df.to_csv('売上Tier1-2×IT投資Tier1-2企業詳細リスト.csv', index=False, encoding='utf-8-sig')
 
 print(f"\n\nファイル出力完了:")
-print("1. 業種別_Tier1-2企業数.csv - 業種ごとの企業数集計")
-print("2. Tier1-2企業詳細リスト.csv - 企業詳細情報")
+print("1. 業種別_売上Tier1-2×IT投資Tier1-2企業数.csv - 業種ごとの企業数集計")
+print("2. 売上Tier1-2×IT投資Tier1-2企業詳細リスト.csv - 企業詳細情報")
 
 # Additional analysis: Show top companies in each tier combination
-print("\n\n=== Tier組み合わせ別 代表企業 ===")
+print("\n\n=== セグメント別 代表企業 ===")
 for revenue_tier in ['Tier1', 'Tier2']:
     for it_tier in ['Tier1', 'Tier2']:
         segment_companies = target_companies[
@@ -115,7 +117,7 @@ for revenue_tier in ['Tier1', 'Tier2']:
             (target_companies['IT投資Tier'] == it_tier)
         ]
         if len(segment_companies) > 0:
-            print(f"\n{revenue_tier} x {it_tier}: {len(segment_companies)}社")
+            print(f"\n売上{revenue_tier} × IT投資{it_tier}: {len(segment_companies)}社")
             top_companies = segment_companies.nlargest(5, '売上高（億円）')[['企業名', '業種', '売上高（億円）', 'IT投資規模（億円）']]
             for _, company in top_companies.iterrows():
                 print(f"  - {company['企業名']} ({company['業種']}) - 売上高: {company['売上高（億円）']:,.0f}億円, IT投資: {company['IT投資規模（億円）']:,.0f}億円")
